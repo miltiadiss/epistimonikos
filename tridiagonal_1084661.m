@@ -1,32 +1,52 @@
 function x = tridiagonal_1084661(A, B)
    
-    D = diag(A); % Κατασκευάζουμε το διαγώνιο μητρώο D
-    L = diag(A, -1); % Κατασκευάζουμε το κάτω τριγωνικό μητρώο L
-    U = diag(A, 1); % Κατασκευάζουμε το άνω τριγωνικό μητρώο U
-    L = [0; L]; % Προσθήκη ενός μηδενικού στην αρχή του μητρώου L
-    U = [U; 0]; % Προσθήκη ενός μηδενικού στο τέλος του μητρώου U
+    A_0 = A; % Ξεκινάμε διασπώντας το μητρώο Α(0) σε D, L, U
+    D = diag(diag(A_0)); % Κατασκευάζουμε το διαγώνιο μητρώο D
+    D_inv = diag(1 ./ diag(D)); % Κατασκευάζουμε το αντίστροφο D
+    L = diag(diag(A_0, -1),-1); % Κατασκευάζουμε το κάτω τριγωνικό μητρώο L
+    U = diag(diag(A_0, 1),1); % Κατασκευάζουμε το άνω τριγωνικό μητρώο U
 
-    n = length(D);
-    x = zeros(n, length(B)); % Μητρώο όπου αποθηκεύoνται οι λύσεις x των συστημάτων Ax = b
+    % Μετασχηματίζουμε τα D, L, U σε D(1), L(1), U(1)
+    D_1 = D - L * D_inv * U - U * D_inv * L; 
+    L_1 = L * D_inv * L; 
+    U_1 = U * D_inv * U; 
+    A_1 = D_1 - L_1 - U_1; % Μετασχηματίζουμε το μητρώο Α(0) σε Α(1)
 
-    for k = 1:length(B) % Επίλυση για κάθε δεξί μέλος του B (διάνυσμα b)
-        bk = B(:, k); % Κρατάμε ως διάνυσμα b τη k-στήλη του μητρώου Β
+    % Μετασχηματίζουμε τα διανύσματα b(0) του μητρώου B(0) σε b(1) στο
+    % μητρώο Β(1)
+    B_0 = B;
+    B_1 = zeros(size(B));
+    for i = 1 : size(B)
+        B_1(:,i) = B_0(:,i) + L * D_inv * B_0(:,i) + U * D_inv * B_0(:,i);
+    end
 
-        D1 = D - L .* (U ./ D); % Πρώτο βήμα επαναληπτικού αλγορίθμου επίλυσης με D(1)=D-LD^(-1)U
-        L1 = L .* (L ./ D); % L(1)=LD^(-1)L
-        U1 = U .* (U ./ D); % U(1)=UD^(-1)U
-        b1 = bk + L .* (bk ./ D) + U .* (bk ./ D); % b(1)=b+L(D^(-1)b)+U(D^(-1)b)
+    A_k=A_1;
+    disp(A_k);
+    B_k = B_1;
+    x = zeros(5, 5);
+  
+    for i = 1 : ceil(log2((size(A) - 1) / 2)) + 1
+        if not(isequal(A_k, diag(diag(A_k))))
+            % Calculate A_{k+1} 
+            D_k = diag(diag(A_k));
+            D_inv_k = diag(1 ./ diag(D_k));
+            L_k = diag(diag(A_k, -2^i), -2^i);
+            U_k = diag(diag(A_k, 2^i), 2^i);
+           
+            D_k = D_k - L_k * D_inv_k * U_k - U_k * D_inv_k * L_k;
+            L_k = L_k * D_inv_k * L_k;
+            U_k = U_k * D_inv_k * U_k;
+            D_inv_k = diag(1 ./ diag(D_inv_k));
+            
+            A_k = (D_k + L_k + U_k) * D_inv_k * (D_k - L_k - U_k);
+            disp(num2str(A_k));
     
-        y = zeros(n, 1); % Λύνουμε το μετασχηματισμένο σύστημα
-
-        y(1) = b1(1) / D1(1); % Πρώτο βήμα
-        for i = 2:n % Προς τα εμπρός υπολογισμοί
-            y(i) = (b1(i) - L1(i) * y(i-1)) / D1(i);
-        end
-    
-        x(n, k) = y(n);
-        for i = n-1:-1:1 % Προς τα πίσω αντικατάσταση
-            x(i, k) = y(i) -U1(i) * x(i+1, k);
+            B_k = B_k + L_k * D_inv_k * B_k + U_k * D_inv_k * B_k; 
+            %disp(num2str(B_k));
+        else
+            for j = 1:size(B,2)
+                x(:, j) =  A_k \ B_k(:, j); % A is diagonal, solve the system directly
+            end
         end
     end
 end
