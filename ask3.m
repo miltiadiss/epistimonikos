@@ -28,6 +28,9 @@ C = ttt_1084661(A, B);
 disp('Εξωτερικό γινόμενο των τανυστών Α, Β:');
 disp(C);
 
+D = ttt(tensor(A), tensor(B));
+disp(D);
+
 t = ttt_1084661(A, B, 'all');
 disp('Εσωτερικό γινόμενο των τανυστών Α, Β:');
 disp(num2str(t));
